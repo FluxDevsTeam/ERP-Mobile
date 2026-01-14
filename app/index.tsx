@@ -1,33 +1,85 @@
-import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  Image, 
-  Modal,
-  TouchableWithoutFeedback,
+import { Stack, router } from "expo-router";
+import { Check, Cloud, X } from "lucide-react-native";
+import React, { useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
   Keyboard,
-  Platform,
-  StatusBar
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'; // <--- NEW IMPORT
-import { Cloud, X, Check } from 'lucide-react-native';
-import { Stack, router } from 'expo-router';
-import "../global.css"; 
+  Modal,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
+import { SafeAreaView } from "react-native-safe-area-context";
+import "../global.css";
+
+// Import the API service
+import { SignupRequest, signupUser } from "../api/signup";
 
 export default function SignupScreen() {
   // --- STATE MANAGEMENT ---
+  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [step, setStep] = useState(1);
-  const [otp, setOtp] = useState(['', '', '', '']);
+
+  // OTP State
+  const [otp, setOtp] = useState(["", "", "", ""]);
+
+  // Form Data State
+  const [formData, setFormData] = useState<SignupRequest>({
+    first_name: "",
+    last_name: "",
+    username: "",
+    phone_number: "",
+    email: "",
+    password: "",
+    verify_password: "", // mapped to Confirm Password
+  });
+
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   // --- ACTIONS ---
-  const handleGetStarted = () => {
-    setStep(1);
-    setModalVisible(true);
+
+  // Update form helper
+  const updateForm = (key: keyof SignupRequest, value: string) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleGetStarted = async () => {
+    // 1. Basic Validation
+    if (!formData.email || !formData.password || !formData.first_name) {
+      Alert.alert("Missing Fields", "Please fill in all required fields.");
+      return;
+    }
+    if (formData.password !== formData.verify_password) {
+      Alert.alert("Password Error", "Passwords do not match.");
+      return;
+    }
+
+    // 2. Call API
+    setLoading(true);
+    const result = await signupUser(formData);
+    setLoading(false);
+
+    // 3. Handle Response
+    if (result.success) {
+      // Success: Open the Verify Email Modal
+      setStep(1);
+      setModalVisible(true);
+    } else {
+      // Error: Show Alert
+      // We try to stringify errors if it's an object, or just show the message
+      const errorMsg = result.errors
+        ? JSON.stringify(result.errors)
+        : result.message;
+
+      Alert.alert("Signup Failed", errorMsg || "Something went wrong");
+    }
   };
 
   const handleSendEmail = () => {
@@ -38,12 +90,8 @@ export default function SignupScreen() {
     const newOtp = [...otp];
     newOtp[index] = text;
     setOtp(newOtp);
-    if (text.length === 1 && index < 3) {
-      inputRefs.current[index + 1]?.focus();
-    }
-    if (text.length === 0 && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
+    if (text.length === 1 && index < 3) inputRefs.current[index + 1]?.focus();
+    if (text.length === 0 && index > 0) inputRefs.current[index - 1]?.focus();
   };
 
   const handleVerifyCode = () => {
@@ -53,8 +101,8 @@ export default function SignupScreen() {
   const handleDone = () => {
     setModalVisible(false);
     setStep(1);
-    setOtp(['', '', '', '']);
-    router.push('/onboarding');
+    setOtp(["", "", "", ""]);
+    router.push("/onboarding");
   };
 
   const handleClose = () => {
@@ -62,62 +110,107 @@ export default function SignupScreen() {
     setStep(1);
   };
 
-  // --- MODAL CONTENT ---
+  // --- MODAL CONTENT (Unchanged mostly) ---
   const renderModalContent = () => {
     switch (step) {
-      case 1: 
+      case 1:
         return (
           <View className="bg-white w-full rounded-2xl p-6 relative">
-            <TouchableOpacity onPress={handleClose} className="absolute top-4 right-4 z-10 p-2 bg-slate-50 rounded-full">
+            <TouchableOpacity
+              onPress={handleClose}
+              className="absolute top-4 right-4 z-10 p-2 bg-slate-50 rounded-full"
+            >
               <X size={20} color="#64748B" />
             </TouchableOpacity>
-            <Text className="text-2xl font-bold text-[#0F172A] mb-4 pr-8">Verify your email address</Text>
+            <Text className="text-2xl font-bold text-[#0F172A] mb-4 pr-8">
+              Verify your email address
+            </Text>
             <Text className="text-[#64748B] text-base text-center mb-6 leading-6">
-              You have entered {'\n'}
-              <Text className="font-bold text-[#0F172A]">the.rajihakeem@gmail.com</Text> as the email address for your account{'\n\n'}
+              You have entered {"\n"}
+              <Text className="font-bold text-[#0F172A]">
+                {formData.email}
+              </Text>{" "}
+              as the email address for your account{"\n\n"}
               Please verify this email address by clicking the button below.
             </Text>
-            <TouchableOpacity onPress={handleSendEmail} className="bg-[#5841D8] h-12 rounded-xl items-center justify-center shadow-lg shadow-indigo-200">
-              <Text className="text-white text-base font-bold">Verify your email</Text>
+            <TouchableOpacity
+              onPress={handleSendEmail}
+              className="bg-[#5841D8] h-12 rounded-xl items-center justify-center shadow-lg shadow-indigo-200"
+            >
+              <Text className="text-white text-base font-bold">
+                Verify your email
+              </Text>
             </TouchableOpacity>
           </View>
         );
-      case 2: 
+      case 2:
         return (
           <View className="bg-white w-full rounded-2xl p-6 relative">
-            <TouchableOpacity onPress={handleClose} className="absolute top-4 right-4 z-10 p-2 bg-slate-50 rounded-full">
+            <TouchableOpacity
+              onPress={handleClose}
+              className="absolute top-4 right-4 z-10 p-2 bg-slate-50 rounded-full"
+            >
               <X size={20} color="#64748B" />
             </TouchableOpacity>
-            <Text className="text-2xl font-bold text-[#0F172A] mb-2">Email Verification</Text>
-            <Text className="text-[#64748B] text-sm mb-8">Enter the verification code sent to your email</Text>
+            <Text className="text-2xl font-bold text-[#0F172A] mb-2">
+              Email Verification
+            </Text>
+            <Text className="text-[#64748B] text-sm mb-8">
+              Enter the verification code sent to your email
+            </Text>
             <View className="flex-row justify-between px-2 mb-6">
               {otp.map((digit, index) => (
                 <TextInput
                   key={index}
-                  ref={(el) => { inputRefs.current[index] = el; }}
+                  ref={(el) => {
+                    inputRefs.current[index] = el;
+                  }}
                   value={digit}
                   onChangeText={(text) => handleOtpChange(text, index)}
                   keyboardType="number-pad"
                   maxLength={1}
-                  className={`w-14 h-14 border-b-2 text-center text-2xl font-bold text-[#0F172A] ${digit ? 'border-[#5841D8]' : 'border-[#CBD5E1]'}`}
+                  className={`w-14 h-14 border-b-2 text-center text-2xl font-bold text-[#0F172A] ${
+                    digit ? "border-[#5841D8]" : "border-[#CBD5E1]"
+                  }`}
                 />
               ))}
             </View>
-            <TouchableOpacity className="mb-8 items-center"><Text className="text-[#5841D8] font-semibold">Resend Code</Text></TouchableOpacity>
+            <TouchableOpacity className="mb-8 items-center">
+              <Text className="text-[#5841D8] font-semibold">Resend Code</Text>
+            </TouchableOpacity>
             <View className="flex-row gap-x-4">
-              <TouchableOpacity onPress={handleClose} className="flex-1 h-12 rounded-xl items-center justify-center border border-[#EF4444]"><Text className="text-[#EF4444] text-base font-bold">Cancel</Text></TouchableOpacity>
-              <TouchableOpacity onPress={handleVerifyCode} className="flex-1 bg-[#5841D8] h-12 rounded-xl items-center justify-center shadow-md shadow-indigo-200"><Text className="text-white text-base font-bold">Verify</Text></TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleClose}
+                className="flex-1 h-12 rounded-xl items-center justify-center border border-[#EF4444]"
+              >
+                <Text className="text-[#EF4444] text-base font-bold">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleVerifyCode}
+                className="flex-1 bg-[#5841D8] h-12 rounded-xl items-center justify-center shadow-md shadow-indigo-200"
+              >
+                <Text className="text-white text-base font-bold">Verify</Text>
+              </TouchableOpacity>
             </View>
           </View>
         );
-      case 3: 
+      case 3:
         return (
           <View className="bg-white w-full rounded-2xl p-8 items-center">
             <View className="w-24 h-24 bg-[#5841D8] rounded-full items-center justify-center mb-6 shadow-xl shadow-indigo-300">
-               <Check size={48} color="white" strokeWidth={3} />
+              <Check size={48} color="white" strokeWidth={3} />
             </View>
-            <Text className="text-2xl font-bold text-[#0F172A] mb-8">Email verified</Text>
-            <TouchableOpacity onPress={handleDone} className="bg-[#5841D8] w-full h-12 rounded-xl items-center justify-center shadow-lg shadow-indigo-200"><Text className="text-white text-base font-bold">Done</Text></TouchableOpacity>
+            <Text className="text-2xl font-bold text-[#0F172A] mb-8">
+              Email verified
+            </Text>
+            <TouchableOpacity
+              onPress={handleDone}
+              className="bg-[#5841D8] w-full h-12 rounded-xl items-center justify-center shadow-lg shadow-indigo-200"
+            >
+              <Text className="text-white text-base font-bold">Done</Text>
+            </TouchableOpacity>
           </View>
         );
     }
@@ -125,19 +218,24 @@ export default function SignupScreen() {
 
   // --- MAIN RENDER ---
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-white" edges={["top", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar barStyle="dark-content" />
-      
-      {/* KEYBOARD AWARE SCROLL VIEW */}
-      <KeyboardAwareScrollView 
-        enableOnAndroid={true}
-        extraScrollHeight={20}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
-        className="px-8"
+
+      <KeyboardAwareScrollView
+        enableOnAndroid
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 16,
+          paddingBottom: 40,
+        }}
+        // className="px-6 pt-4 pb-10"
+        extraScrollHeight={140}
+        enableAutomaticScroll
       >
-        <View className="items-center mt-8 mb-12">
+        <View className="items-center mt-5 mb-7">
           <View className="flex-row items-center">
             <View className="w-10 h-10 bg-[#F5F3FF] border border-[#E0E7FF] rounded-xl items-center justify-center mr-3">
               <Cloud size={22} color="#5841D8" />
@@ -146,53 +244,165 @@ export default function SignupScreen() {
           </View>
         </View>
 
-        <Text className="text-4xl font-bold text-[#0F172A] mb-10">Sign up</Text>
+        <Text className="text-4xl font-bold text-[#0F172A] mb-8">Sign up</Text>
 
-        <View className="gap-y-6">
-          <View>
-            <Text className="text-[15px] font-semibold text-[#334155] mb-1">Name*</Text>
-            <TextInput placeholder="Enter your name" placeholderTextColor="#94A3B8" className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white" />
+        {/* Updated Form Fields to match API requirements */}
+        <View className="gap-y-5">
+          {/* Split Name into First and Last */}
+          <View className="flex-row gap-x-4">
+            <View className="flex-1">
+              <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+                First Name*
+              </Text>
+              <TextInput
+                value={formData.first_name}
+                onChangeText={(text) => updateForm("first_name", text)}
+                placeholder="First Name"
+                placeholderTextColor="#94A3B8"
+                className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+              />
+            </View>
+            <View className="flex-1">
+              <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+                Last Name*
+              </Text>
+              <TextInput
+                value={formData.last_name}
+                onChangeText={(text) => updateForm("last_name", text)}
+                placeholder="Last Name"
+                placeholderTextColor="#94A3B8"
+                className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+              />
+            </View>
           </View>
+
           <View>
-            <Text className="text-[15px] font-semibold text-[#334155] mb-1">Email*</Text>
-            <TextInput placeholder="Enter your email" placeholderTextColor="#94A3B8" className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white" />
+            <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+              Username*
+            </Text>
+            <TextInput
+              value={formData.username}
+              onChangeText={(text) => updateForm("username", text)}
+              placeholder="Choose a username"
+              placeholderTextColor="#94A3B8"
+              autoCapitalize="none"
+              className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+            />
           </View>
+
           <View>
-            <Text className="text-[15px] font-semibold text-[#334155] mb-1">Password*</Text>
-            <TextInput placeholder="Create a password" placeholderTextColor="#94A3B8" secureTextEntry className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white" />
+            <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+              Phone Number
+            </Text>
+            <TextInput
+              value={formData.phone_number}
+              onChangeText={(text) => updateForm("phone_number", text)}
+              placeholder="+234..."
+              placeholderTextColor="#94A3B8"
+              keyboardType="phone-pad"
+              className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+            />
           </View>
+
           <View>
-            <Text className="text-[15px] font-semibold text-[#334155] mb-1">Confirm Password*</Text>
-            <TextInput placeholder="Confirm password" placeholderTextColor="#94A3B8" secureTextEntry className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white" />
-            <Text className="text-sm text-[#64748B] mt-2">Must be at least 8 characters.</Text>
+            <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+              Email*
+            </Text>
+            <TextInput
+              value={formData.email}
+              onChangeText={(text) => updateForm("email", text)}
+              placeholder="Enter your email"
+              placeholderTextColor="#94A3B8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+            />
+          </View>
+
+          <View>
+            <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+              Password*
+            </Text>
+            <TextInput
+              value={formData.password}
+              onChangeText={(text) => updateForm("password", text)}
+              placeholder="Create a password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry
+              className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+            />
+          </View>
+
+          <View>
+            <Text className="text-[15px] font-semibold text-[#334155] mb-1">
+              Confirm Password*
+            </Text>
+            <TextInput
+              value={formData.verify_password}
+              onChangeText={(text) => updateForm("verify_password", text)}
+              placeholder="Confirm password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry
+              className="h-14 border border-[#D1D5DB] rounded-xl px-4 text-base bg-white"
+            />
+            <Text className="text-sm text-[#64748B] mt-2">
+              Must be at least 8 characters.
+            </Text>
           </View>
         </View>
 
         <View className="mt-10 gap-y-4">
-          <TouchableOpacity onPress={handleGetStarted} activeOpacity={0.8} className="bg-[#5841D8] h-14 rounded-xl items-center justify-center shadow-md shadow-indigo-100">
-            <Text className="text-white text-lg font-bold">Get started</Text>
+          <TouchableOpacity
+            onPress={handleGetStarted}
+            activeOpacity={0.8}
+            disabled={loading}
+            className={`bg-[#5841D8] h-14 rounded-xl items-center justify-center shadow-md shadow-indigo-100 ${
+              loading ? "opacity-80" : "opacity-100"
+            }`}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-lg font-bold">Get started</Text>
+            )}
           </TouchableOpacity>
+
           <TouchableOpacity className="bg-white border border-[#D1D5DB] h-14 rounded-xl flex-row items-center justify-center">
-            <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg' }} className="w-6 h-6 mr-3" />
-            <Text className="text-[#334155] text-lg font-bold">Sign up with Google</Text>
+            <Image
+              source={{
+                uri: "https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg",
+              }}
+              className="w-6 h-6 mr-3"
+            />
+            <Text className="text-[#334155] text-lg font-bold">
+              Sign up with Google
+            </Text>
           </TouchableOpacity>
         </View>
 
         <View className="mt-12 mb-8 items-center">
           <Text className="text-[#64748B] text-base">
-            Already have an account? <Text onPress={() => router.push('/login')} className="text-[#5841D8] font-bold">Log in</Text>
+            Already have an account?{" "}
+            <Text
+              onPress={() => router.push("/login")}
+              className="text-[#5841D8] font-bold"
+            >
+              Log in
+            </Text>
           </Text>
         </View>
       </KeyboardAwareScrollView>
 
       {/* MODAL */}
-      <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={handleClose}>
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={handleClose}
+      >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1 bg-black/60 justify-center items-center px-6">
-            {/* We also use KeyboardAwareScrollView here for the modal if inputs get complex, but standard View is usually fine for these small modals */}
-            <View className="w-full">
-              {renderModalContent()}
-            </View>
+            <View className="w-full">{renderModalContent()}</View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>

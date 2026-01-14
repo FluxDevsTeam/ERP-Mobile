@@ -41,3 +41,7 @@ app-example
 # generated native folders
 /ios
 /android
+
+# API Configuration
+api/baseURL/identityBaseURL.ts
+api/baseURL/billingBaseURL.ts

@@ -5,19 +5,47 @@ import {
   TextInput, 
   TouchableOpacity, 
   Image, 
-  StatusBar 
+  StatusBar,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'; // <--- NEW IMPORT
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Cloud, Check } from 'lucide-react-native';
 import { Stack, router } from 'expo-router';
 import "../global.css"; 
 
-export default function LoginScreen() {
-  const [rememberMe, setRememberMe] = useState(false);
+// Import API
+import { loginUser } from '../api/login';
 
-  const handleSignIn = () => {
-    router.replace('/onboarding');
+export default function LoginScreen() {
+  const [identifier, setIdentifier] = useState(''); // Stores email or username
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSignIn = async () => {
+    // 1. Validation
+    if (!identifier || !password) {
+      Alert.alert("Missing Fields", "Please enter your email/username and password.");
+      return;
+    }
+
+    // 2. Call API
+    setLoading(true);
+    const result = await loginUser({ identifier, password });
+    setLoading(false);
+
+    // 3. Handle Response
+    if (result.success) {
+      // TODO: Save token here (e.g., SecureStore or AsyncStorage)
+      // console.log("Token:", result.data?.access); 
+      
+      // Navigate to onboarding or dashboard
+      router.replace('/onboarding');
+    } else {
+      Alert.alert("Login Failed", result.message || "Invalid credentials");
+    }
   };
 
   return (
@@ -48,12 +76,26 @@ export default function LoginScreen() {
 
         <View className="gap-y-5">
           <View>
-            <Text className="text-[14px] font-medium text-[#334155] mb-1.5">Email</Text>
-            <TextInput placeholder="Enter your email" placeholderTextColor="#94A3B8" keyboardType="email-address" autoCapitalize="none" className="h-12 border border-[#D1D5DB] rounded-lg px-4 text-base text-[#0F172A] bg-white" />
+            <Text className="text-[14px] font-medium text-[#334155] mb-1.5">Email or Username</Text>
+            <TextInput 
+              value={identifier}
+              onChangeText={setIdentifier}
+              placeholder="Enter your email or username" 
+              placeholderTextColor="#94A3B8" 
+              autoCapitalize="none"
+              className="h-12 border border-[#D1D5DB] rounded-lg px-4 text-base text-[#0F172A] bg-white" 
+            />
           </View>
           <View>
             <Text className="text-[14px] font-medium text-[#334155] mb-1.5">Password</Text>
-            <TextInput placeholder="••••••••" placeholderTextColor="#94A3B8" secureTextEntry className="h-12 border border-[#D1D5DB] rounded-lg px-4 text-base text-[#0F172A] bg-white" />
+            <TextInput 
+              value={password}
+              onChangeText={setPassword}
+              placeholder="••••••••" 
+              placeholderTextColor="#94A3B8" 
+              secureTextEntry 
+              className="h-12 border border-[#D1D5DB] rounded-lg px-4 text-base text-[#0F172A] bg-white" 
+            />
           </View>
         </View>
 
@@ -65,14 +107,23 @@ export default function LoginScreen() {
             <Text className="text-[#334155] text-sm font-medium">Remember for 30 days</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-  <Text className="text-[#EF4444] text-sm font-semibold">Forgot password</Text>
-</TouchableOpacity>
-         </View>
+            <Text className="text-[#EF4444] text-sm font-semibold">Forgot password</Text>
+          </TouchableOpacity>
+        </View>
 
         <View className="gap-y-4">
-          <TouchableOpacity onPress={handleSignIn} className="bg-[#5841D8] h-12 rounded-lg items-center justify-center shadow-sm">
-            <Text className="text-white text-base font-semibold">Sign in</Text>
+          <TouchableOpacity 
+            onPress={handleSignIn} 
+            disabled={loading}
+            className={`bg-[#5841D8] h-12 rounded-lg items-center justify-center shadow-sm ${loading ? 'opacity-80' : 'opacity-100'}`}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white text-base font-semibold">Sign in</Text>
+            )}
           </TouchableOpacity>
+          
           <TouchableOpacity className="bg-white border border-[#D1D5DB] h-12 rounded-lg flex-row items-center justify-center">
             <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg' }} className="w-5 h-5 mr-3" />
             <Text className="text-[#334155] text-base font-semibold">Sign in with Google</Text>
