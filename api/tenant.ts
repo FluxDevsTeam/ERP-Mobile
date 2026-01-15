@@ -8,6 +8,20 @@ export interface TenantRequest {
   status: string;
 }
 
+export interface Tenant {
+  id: string;
+  name: string;
+  industry: string;
+  status: string;
+  created_at: string;
+  // Note: Email is not in the tenant object, it belongs to the User.
+}
+
+interface TenantListResponse {
+  count: number;
+  results: Tenant[];
+}
+
 // --- HELPER: GET TOKEN ---
 const getAuthHeaders = async () => {
   // Must match the key used in login.ts ('userToken')
@@ -73,5 +87,23 @@ export const createTenant = async (name: string, industry: string) => {
       };
     }
     return { success: false, message: 'Network error occurred' };
+  }
+};
+
+export const getTenants = async () => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get<TenantListResponse>(`${IDENTITY_BASE_URL}/tenant/`, { headers });
+    
+    return {
+      success: true,
+      data: response.data.results
+    };
+  } catch (error: any) {
+    console.error("Get Tenants Error:", error);
+    if (axios.isAxiosError(error) && error.response) {
+      return { success: false, message: error.response.data.message };
+    }
+    return { success: false, message: 'Network error' };
   }
 };

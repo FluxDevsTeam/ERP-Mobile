@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { Cloud, Check } from 'lucide-react-native';
 import { Stack, router } from 'expo-router';
+import { useUserStore } from '../store/userStore';
 import "../global.css"; 
 
 // Import API
@@ -23,26 +24,37 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const setUser = useUserStore((state) => state.setUser);
+  const setToken = useUserStore((state) => state.setToken);
 
   const handleSignIn = async () => {
-    // 1. Validation
     if (!identifier || !password) {
       Alert.alert("Missing Fields", "Please enter your email/username and password.");
       return;
     }
 
-    // 2. Call API
     setLoading(true);
     const result = await loginUser({ identifier, password });
     setLoading(false);
 
-    // 3. Handle Response
     if (result.success) {
-      // TODO: Save token here (e.g., SecureStore or AsyncStorage)
-      // console.log("Token:", result.data?.access); 
+      // 1. Save data to Global State
+      const userData = result.data.user;
+      const token = result.data.access_token;
       
-      // Navigate to onboarding or dashboard
-      router.replace('/onboarding');
+      setUser(userData);
+      setToken(token);
+
+      // 2. CONDITIONAL NAVIGATION
+      // Check if the user already has a tenant (company)
+      if (userData.tenant_name) {
+        console.log("User has tenant:", userData.tenant_name, "- Going to Dashboard");
+        router.replace('/dashboard');
+      } else {
+        console.log("No tenant found - Going to Onboarding");
+        router.replace('/onboarding');
+      }
+
     } else {
       Alert.alert("Login Failed", result.message || "Invalid credentials");
     }
