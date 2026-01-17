@@ -1,11 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StatusBar,
-  ScrollView
+  View, Text, TextInput, TouchableOpacity, StatusBar, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -20,10 +15,10 @@ import "../../global.css";
 import { useUserStore } from '../../store/userStore';
 
 // Components
-import TenantBranchTab from '../../components/dashboard/TenantBranchTab'; // <--- NEW
+import TenantBranchTab from '../../components/dashboard/TenantBranchTab';
 import SubscriptionTab from '../../components/dashboard/SubscriptionTab';
 
-const TABS = ["User Management", "Tenant & Branches", "Subscription", "Payments"];
+const TABS = ["Tenant & Branches", "Subscription", "User Management", "Payments"];
 
 export default function DashboardScreen() {
   const navigation = useNavigation();
@@ -61,50 +56,74 @@ export default function DashboardScreen() {
         enableOnAndroid
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40}}
+        contentContainerStyle={{paddingHorizontal: 0, paddingTop: 16, paddingBottom: 40}}
         extraScrollHeight={140}
         enableAutomaticScroll
       >
-        {/* SEARCH & DATE */}
-        <View className="flex-row gap-x-3 mb-6">
-          <View className="flex-1 h-11 bg-white border border-slate-200 rounded-xl px-3 flex-row items-center">
-            <Search size={18} color="#94A3B8" />
-            <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search..." placeholderTextColor="#94A3B8" className="flex-1 ml-2 text-sm text-[#0F172A]" />
-          </View>
-          <View className="h-11 bg-white border border-slate-200 rounded-xl px-3 flex-row items-center justify-center">
-            <Calendar size={16} color="#64748B" className="mr-2" />
-            <Text className="text-xs font-medium text-[#64748B]">14 Jan, 2026</Text>
+        <View className="px-6">
+          {/* SEARCH & DATE */}
+          <View className="flex-row gap-x-3 mb-6">
+            <View className="flex-1 h-11 bg-white border border-slate-200 rounded-xl px-3 flex-row items-center">
+              <Search size={18} color="#94A3B8" />
+              <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search..." placeholderTextColor="#94A3B8" className="flex-1 ml-2 text-sm text-[#0F172A]" />
+            </View>
+            <View className="h-11 bg-white border border-slate-200 rounded-xl px-3 flex-row items-center justify-center">
+              <Calendar size={16} color="#64748B" className="mr-2" />
+              <Text className="text-xs font-medium text-[#64748B]">14 Jan</Text>
+            </View>
           </View>
         </View>
 
         {/* TABS */}
-        <View className="-mx-6 px-6 mb-8">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View className="mb-6">
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 24 }}
+          >
             {TABS.map((tab) => {
               const isActive = activeTab === tab;
               return (
-                <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} className={`mr-6 pb-2 border-b-2 ${isActive ? 'border-[#5841D8]' : 'border-transparent'}`}>
-                  <Text className={`font-semibold ${isActive ? 'text-[#5841D8]' : 'text-[#64748B]'}`}>{tab}</Text>
+                <TouchableOpacity 
+                  key={tab} 
+                  onPress={() => setActiveTab(tab)} 
+                  className={`mr-3 px-5 py-2.5 rounded-full border ${
+                    isActive 
+                      ? 'bg-[#0F172A] border-[#0F172A]' 
+                      : 'bg-white border-slate-200'
+                  }`}
+                >
+                  <Text className={`font-semibold text-sm ${
+                    isActive ? 'text-white' : 'text-slate-600'
+                  }`}>
+                    {tab}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
 
-        {/* --- DYNAMIC CONTENT --- */}
-        
-        {/* 1. TENANT & BRANCHES TAB */}
-        {activeTab === "Tenant & Branches" && <TenantBranchTab />}
-
-        {/* 2. SUBSCRIPTION TAB */}
-        {activeTab === "Subscription" && <SubscriptionTab />}
-
-        {/* 3. PLACEHOLDER FOR OTHERS */}
-        {!["Tenant & Branches", "Subscription"].includes(activeTab) && (
-          <View className="items-center mt-10">
-            <Text className="text-slate-400">Content for {activeTab} coming soon...</Text>
+        <View className="px-6">
+          {/* --- PERSISTENT CONTENT (No Unmounting) --- */}
+          
+          {/* 1. TENANT & BRANCHES TAB */}
+          <View style={{ display: activeTab === "Tenant & Branches" ? 'flex' : 'none' }}>
+            <TenantBranchTab />
           </View>
-        )}
+
+          {/* 2. SUBSCRIPTION TAB */}
+          <View style={{ display: activeTab === "Subscription" ? 'flex' : 'none' }}>
+            <SubscriptionTab />
+          </View>
+
+          {/* 3. PLACEHOLDER FOR OTHERS */}
+          <View style={{ display: !["Tenant & Branches", "Subscription"].includes(activeTab) ? 'flex' : 'none' }}>
+            <View className="items-center mt-10">
+              <Text className="text-slate-400">Content for {activeTab} coming soon...</Text>
+            </View>
+          </View>
+        </View>
 
       </KeyboardAwareScrollView>
     </SafeAreaView>

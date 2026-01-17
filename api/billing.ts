@@ -3,7 +3,6 @@ import * as SecureStore from 'expo-secure-store';
 import { BILLING_BASE_URL } from './baseURL/billingBaseURL';
 
 // --- INTERFACES ---
-
 export interface Plan {
   id: string;
   name: string;
@@ -16,7 +15,6 @@ export interface Plan {
   tier_level: string;
 }
 
-// Matches the JSON you provided
 export interface Subscription {
   id: string;
   plan: Plan;
@@ -24,7 +22,7 @@ export interface Subscription {
   start_date: string;
   end_date: string;
   remaining_days: number;
-  auto_renew?: boolean; // Not in JSON, but in UI. We'll default to true/false logic.
+  auto_renew?: boolean;
 }
 
 interface PlansResponse {
@@ -39,7 +37,6 @@ interface SubscriptionsResponse {
   results: Subscription[];
 }
 
-// --- HELPERS ---
 const getAuthHeaders = async () => {
   const token = await SecureStore.getItemAsync('userToken');
   return {
@@ -68,11 +65,7 @@ export const getBillingPlans = async () => {
 export const getUserSubscriptions = async (page: number = 1) => {
   try {
     const headers = await getAuthHeaders();
-    // Append page query param
     const url = `${BILLING_BASE_URL}/billing/subscriptions/?page=${page}`; 
-    
-    console.log("🔵 FETCHING SUBSCRIPTIONS PAGE:", page);
-    
     const response = await axios.get<SubscriptionsResponse>(url, { headers });
 
     return {
@@ -84,9 +77,35 @@ export const getUserSubscriptions = async (page: number = 1) => {
         previous: response.data.previous
       }
     };
+  } catch (error: any) {
+    return { success: false, message: 'Failed to fetch subscriptions' };
+  }
+};
+
+// --- NEW: ACTIVATE TRIAL ---
+export const activateTrial = async (planId: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${BILLING_BASE_URL}/billing/subscriptions/activate-trial/`;
+    
+    console.log("🔵 ACTIVATING TRIAL:", planId);
+
+    const response = await axios.post(url, { plan_id: planId }, { headers });
+
+    return {
+      success: true,
+      message: response.data.message || 'Trial activated successfully',
+      data: response.data
+    };
 
   } catch (error: any) {
-    console.log("🔴 SUBSCRIPTION API ERROR", error);
-    return { success: false, message: 'Failed to fetch subscriptions' };
+    console.log("🔴 TRIAL ACTIVATION ERROR");
+    if (axios.isAxiosError(error) && error.response) {
+      return { 
+        success: false, 
+        message: error.response.data.message || 'Failed to activate trial' 
+      };
+    }
+    return { success: false, message: 'Network error occurred' };
   }
 };
