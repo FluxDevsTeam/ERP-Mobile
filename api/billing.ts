@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { BILLING_BASE_URL } from './baseURL/billingBaseURL';
 
-// --- INTERFACES ---
+// ... (Keep existing interfaces: Plan, Subscription, Responses) ...
 export interface Plan {
   id: string;
   name: string;
@@ -22,6 +22,7 @@ export interface Subscription {
   start_date: string;
   end_date: string;
   remaining_days: number;
+  tenant_id: string;
   auto_renew?: boolean;
 }
 
@@ -46,8 +47,7 @@ const getAuthHeaders = async () => {
   };
 };
 
-// --- API CALLS ---
-
+// ... (Keep getBillingPlans and getUserSubscriptions as they were) ...
 export const getBillingPlans = async () => {
   try {
     const headers = await getAuthHeaders();
@@ -67,7 +67,6 @@ export const getUserSubscriptions = async (page: number = 1) => {
     const headers = await getAuthHeaders();
     const url = `${BILLING_BASE_URL}/billing/subscriptions/?page=${page}`; 
     const response = await axios.get<SubscriptionsResponse>(url, { headers });
-
     return {
       success: true,
       data: response.data.results,
@@ -82,15 +81,28 @@ export const getUserSubscriptions = async (page: number = 1) => {
   }
 };
 
-// --- NEW: ACTIVATE TRIAL ---
+// --- UPDATED ACTIVATE TRIAL ---
 export const activateTrial = async (planId: string) => {
   try {
     const headers = await getAuthHeaders();
     const url = `${BILLING_BASE_URL}/billing/subscriptions/activate-trial/`;
     
-    console.log("🔵 ACTIVATING TRIAL:", planId);
+    // Construct Payload
+    const payload = { plan_id: planId };
+    
+    console.log("------------------------------------------------");
+    console.log("🔵 ACTIVATING TRIAL REQUEST");
+    console.log("URL:", url);
+    console.log("HEADERS:", JSON.stringify(headers, null, 2));
+    console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
+    console.log("------------------------------------------------");
 
-    const response = await axios.post(url, { plan_id: planId }, { headers });
+    const response = await axios.post(url, payload, { headers });
+
+    console.log("🟢 ACTIVATE TRIAL SUCCESS");
+    console.log("STATUS:", response.status);
+    console.log("DATA:", JSON.stringify(response.data, null, 2));
+    console.log("------------------------------------------------");
 
     return {
       success: true,
@@ -99,11 +111,60 @@ export const activateTrial = async (planId: string) => {
     };
 
   } catch (error: any) {
-    console.log("🔴 TRIAL ACTIVATION ERROR");
+    console.log("------------------------------------------------");
+    console.log("🔴 ACTIVATE TRIAL ERROR");
+    
+    if (axios.isAxiosError(error) && error.response) {
+      console.log("STATUS CODE:", error.response.status);
+      console.log("ERROR DATA:", JSON.stringify(error.response.data, null, 2));
+      
+      return { 
+        success: false, 
+        message: error.response.data.message || error.response.data.detail || 'Failed to activate trial' 
+      };
+    }
+    
+    console.error("ERROR OBJ:", error);
+    console.log("------------------------------------------------");
+    return { success: false, message: 'Network error occurred' };
+  }
+};
+
+// ... (Keep deleteSubscription) ...
+export const deleteSubscription = async (id: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${BILLING_BASE_URL}/billing/subscriptions/${id}/`;
+    const response = await axios.delete(url, { headers });
+    return { success: true, message: response.data.message || 'Subscription deleted successfully' };
+  } catch (error: any) {
+    if (axios.isAxiosError(error) && error.response) {
+      return { success: false, message: error.response.data.message || 'Failed to delete subscription' };
+    }
+    return { success: false, message: 'Network error occurred' };
+  }
+};
+
+export const deletePlan = async (id: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${BILLING_BASE_URL}/billing/plans/${id}/`;
+    
+    console.log("🔴 DELETING PLAN:", id);
+
+    const response = await axios.delete(url, { headers });
+
+    return {
+      success: true,
+      message: response.data.message || 'Plan deleted successfully'
+    };
+
+  } catch (error: any) {
+    console.log("🔴 DELETE PLAN ERROR");
     if (axios.isAxiosError(error) && error.response) {
       return { 
         success: false, 
-        message: error.response.data.message || 'Failed to activate trial' 
+        message: error.response.data.message || 'Failed to delete plan' 
       };
     }
     return { success: false, message: 'Network error occurred' };
