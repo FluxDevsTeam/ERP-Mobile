@@ -2,108 +2,108 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { IDENTITY_BASE_URL } from './baseURL/identityBaseURL';
 
-export interface TenantRequest {
-  name: string;
-  industry: string;
-  status: string;
-}
-
 export interface Tenant {
   id: string;
   name: string;
   industry: string;
   status: string;
   created_at: string;
-  // Note: Email is not in the tenant object, it belongs to the User.
 }
 
+// Response from the Backend
 interface TenantListResponse {
   count: number;
+  next: string | null;
+  previous: string | null;
   results: Tenant[];
 }
 
-// --- HELPER: GET TOKEN ---
-const getAuthHeaders = async () => {
-  // Must match the key used in login.ts ('userToken')
-  const token = await SecureStore.getItemAsync('userToken');
-  
-  if (!token) {
-    console.warn("⚠️ No token found in SecureStore. User might need to login again.");
-  }
+// Return type for our App (includes meta for pagination)
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  meta?: {
+    count: number;
+    next: string | null;
+    previous: string | null;
+  };
+}
 
+const getAuthHeaders = async () => {
+  const token = await SecureStore.getItemAsync('userToken');
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    'Authorization': `JWT ${token}`, 
+    'Authorization': `JWT ${token}`,
   };
 };
 
-// --- API CALLS ---
-
+// Check Name
 export const checkTenantName = async (name: string, industry: string = "Basic") => {
   try {
-    const headers = await getAuthHeaders(); // <--- Token injected here
-    
+    const headers = await getAuthHeaders();
     const payload = { name, industry, status: "Active" };
     const response = await axios.post(`${IDENTITY_BASE_URL}/tenant/check-tenant-name/`, payload, { headers });
-    
-    return { 
-      success: true, 
-      message: response.data.message || 'Company name available' 
-    };
-
+    return { success: true, message: response.data.message || 'Company name available' };
   } catch (error: any) {
-    if (axios.isAxiosError(error) && error.response) {
-      // 409 or 400 usually means taken
-      return { success: false, message: 'Company name is already taken' };
-    }
-    return { success: false, message: 'Unable to verify name' };
+    return { success: false, message: 'Unavailable' };
   }
 };
 
+// Create Tenant
 export const createTenant = async (name: string, industry: string) => {
   try {
-    const headers = await getAuthHeaders(); // <--- Token injected here
-
-    const payload: TenantRequest = { name, industry, status: "Active" };
-    
-    console.log("Creating Tenant with Token...");
+    const headers = await getAuthHeaders();
+    const payload = { name, industry, status: "Active" };
     const response = await axios.post(`${IDENTITY_BASE_URL}/tenant/`, payload, { headers });
-
-    return {
-      success: true,
-      message: 'Company created successfully',
-      data: response.data
-    };
-
+    return { success: true, message: 'Created', data: response.data };
   } catch (error: any) {
-    console.error("Create Tenant Error:", error);
-    if (axios.isAxiosError(error) && error.response) {
-      // Log details if it fails again
-      console.log("Error Details:", error.response.data);
-      return {
-        success: false,
-        message: error.response.data.message || 'Failed to create company'
-      };
-    }
-    return { success: false, message: 'Network error occurred' };
+    return { success: false, message: 'Failed' };
   }
 };
 
-export const getTenants = async () => {
+// Get Tenants (Paginated)
+export const getTenants = async (page: number = 1): Promise<ApiResponse<Tenant[]>> => {
   try {
     const headers = await getAuthHeaders();
-    const response = await axios.get<TenantListResponse>(`${IDENTITY_BASE_URL}/tenant/`, { headers });
+    // Pass page query parameter
+    const response = await axios.get<TenantListResponse>(`${IDENTITY_BASE_URL}/tenant/?page=${page}`, { headers });
     
     return {
       success: true,
-      data: response.data.results
+      data: response.data.results,
+      meta: {
+        count: response.data.count,
+        next: response.data.next,
+        previous: response.data.previous
+      }
     };
   } catch (error: any) {
     console.error("Get Tenants Error:", error);
-    if (axios.isAxiosError(error) && error.response) {
-      return { success: false, message: error.response.data.message };
-    }
     return { success: false, message: 'Network error' };
+  }
+};
+
+export const updateTenant = async (id: string, data: { name?: string; industry?: string }) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.patch(`${IDENTITY_BASE_URL}/tenant/${id}/`, data, { headers });
+    return { success: true, message: 'Tenant updated successfully', data: response.data };
+  } catch (error: any) {
+    console.error("Update Tenant Error:", error);
+    return { success: false, message: 'Failed to update tenant' };
+  }
+};
+
+
+export const deleteTenant = async (id: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    await axios.delete(`${IDENTITY_BASE_URL}/tenant/${id}/`, { headers });
+    return { success: true, message: 'Tenant deleted successfully' };
+  } catch (error: any) {
+    console.error("Delete Tenant Error:", error);
+    return { success: false, message: 'Failed to delete tenant' };
   }
 };

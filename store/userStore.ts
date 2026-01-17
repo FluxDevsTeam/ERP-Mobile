@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,8 +16,10 @@ export interface User {
 interface UserState {
   user: User | null;
   token: string | null;
+  hasHydrated: boolean; // NEW: Track if store has hydrated
   setUser: (user: User) => void;
   setToken: (token: string) => void;
+  setHasHydrated: (state: boolean) => void; // NEW
   logout: () => void;
 }
 
@@ -25,20 +28,25 @@ export const useUserStore = create<UserState>()(
     (set) => ({
       user: null,
       token: null,
+      hasHydrated: false, // Default to false
       
       setUser: (user) => set({ user }),
       setToken: (token) => set({ token }),
+      setHasHydrated: (state) => set({ hasHydrated: state }), // NEW
       
       logout: () => {
-        // Clear state
         set({ user: null, token: null });
-        // Optional: Clear SecureStore token if you used it separately
-        // SecureStore.deleteItemAsync('userToken'); 
       },
     }),
     {
       name: 'fluxdevs-user-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        // This runs AFTER rehydration
+        if (state) {
+          state.setHasHydrated(true);
+        }
+      },
     }
   )
 );

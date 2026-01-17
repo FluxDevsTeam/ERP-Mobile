@@ -1,69 +1,106 @@
 import { useEffect, useState } from 'react';
-import { Platform, View } from 'react-native';
-import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
+import { View } from 'react-native';
+import { Stack, Redirect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
+import { useSegments, SplashScreen } from 'expo-router';
 import "../global.css";
 
 import { useUserStore } from '../store/userStore';
-import LoadingSplashScreen from '@/components/loadingsplashscreen';
+import LoadingSplashScreen from '../components/LoadingSplashScreen'; // Adjust path if needed
 
-export default function Layout() {
-  const [isReady, setIsReady] = useState(false);
-  const user = useUserStore((state) => state.user);
-  const token = useUserStore((state) => state.token);
+// Prevent splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const { user, token, hasHydrated } = useUserStore();
+  const segments = useSegments();
+  const [appIsReady, setAppIsReady] = useState(false);
   
-  // 1. Get Navigation State
-  const rootNavigationState = useRootNavigationState();
-  const segments = useSegments() as string[];
+  console.log('🔄 App State:', {
+    hasHydrated,
+    hasToken: !!token,
+    hasUser: !!user,
+    tenant: user?.tenant_name,
+    segments,
+    appIsReady
+  });
 
   useEffect(() => {
-    if (Platform.OS === 'android') {
-      NavigationBar.setButtonStyleAsync("dark");
+    // Wait for store hydration
+    if (!hasHydrated) {
+      console.log('⏳ Waiting for store hydration...');
+      return;
     }
-  }, []);
 
-  useEffect(() => {
-    // 2. CRITICAL CHECK: Do not run logic until navigation is mounted
-    if (!rootNavigationState?.key) return;
+    console.log('✅ Store is hydrated');
+    
+    // Hide splash screen and mark app as ready
+    SplashScreen.hideAsync();
+    setAppIsReady(true);
 
-    const performAuthCheck = async () => {
-      const currentRoute = segments[0]; 
-      const inPublicGroup = !currentRoute || ['login', 'forgot-password'].includes(currentRoute);
+  }, [hasHydrated]);
 
-      // --- LOGIC ---
-      if (token && user?.tenant_name) {
-        if (inPublicGroup) {
-          router.replace('/dashboard');
-        }
-      } 
-      else if (token && !user?.tenant_name) {
-        if (currentRoute !== 'onboarding') {
-          router.replace('/onboarding');
-        }
-      }
-      
-      // Reveal app after check
-      setTimeout(() => {
-        setIsReady(true);
-      }, 1000);
-    };
-
-    performAuthCheck();
-
-  }, [token, user, rootNavigationState?.key]); 
-
-  // 3. While Expo is loading the Root Layout, show NOTHING (or Splash)
-  // This prevents the "Attempted to navigate before mounting" error
-  if (!rootNavigationState?.key) {
+  // Show custom loading screen until app is ready
+  if (!appIsReady) {
     return <LoadingSplashScreen />;
   }
+
+  // Get first segment safely
+  const firstSegment = segments[0] ?? '';
+
+  console.log('🎯 Current Route Segment:', firstSegment);
+  console.log('📂 Full Segments:', segments);
+
+  // Define auth routes ('' for root/signup)
+  const authRoutes = ['', 'login', 'forgot-password'];
+  const isAuthRoute = authRoutes.includes(firstSegment);
+
+  // Check if in protected drawer group
+  const isInProtectedGroup = firstSegment === '(drawer)';
+
+  // Check for onboarding
+  const isOnboarding = firstSegment === 'onboarding';
+
+  // NO TOKEN - should be on auth routes
+  if (!token) {
+    console.log('🔐 No token found');
+    if (!isAuthRoute) {
+      console.log('➡️ Redirecting to login');
+      return <Redirect href="/login" />;
+    }
+  }
+  
+  // HAS TOKEN but NO USER
+  if (token && !user) {
+    console.log('⚠️ Has token but no user data');
+    return <Redirect href="/login" />;
+  }
+
+  // HAS TOKEN and USER but NO TENANT - needs onboarding
+  if (token && user && !user.tenant_name) {
+    console.log('📝 User needs onboarding');
+    if (!isOnboarding) {
+      console.log('➡️ Redirecting to onboarding');
+      return <Redirect href="/onboarding" />;
+    }
+  }
+
+  // HAS TOKEN, USER, and TENANT - should be in protected group
+  if (token && user?.tenant_name) {
+    console.log('🏠 User is fully authenticated');
+    if (!isInProtectedGroup) {
+      console.log('➡️ Redirecting to dashboard');
+      return <Redirect href="/dashboard" />;
+    }
+  }
+
+  // If we get here, user is on the correct route
+  console.log('✅ User is on correct route:', firstSegment);
 
   return (
     <View style={{ flex: 1 }}>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
-      {!isReady && <LoadingSplashScreen />}
     </View>
   );
 }

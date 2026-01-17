@@ -1,3 +1,7 @@
+// drawer layout file
+
+
+
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Drawer } from 'expo-router/drawer';
 import Sidebar from '../../components/sidebar'; // Import the component we just made
@@ -8,7 +12,7 @@ export default function DrawerLayout() {
       <Drawer
         drawerContent={(props) => <Sidebar {...props} />}
         screenOptions={{
-          headerShown: false, // We hide the default header because Dashboard has its own custom header
+          headerShown: true, // We hide the default header because Dashboard has its own custom header
           drawerType: 'front', // Slide over
           drawerStyle: {
             width: '75%', // Width of the sidebar

@@ -2,13 +2,30 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { IDENTITY_BASE_URL } from './baseURL/identityBaseURL';
 
-// We will refine this interface after you paste the console log
 export interface Branch {
   id: string;
   name?: string; 
   location?: string;
   created_at?: string;
-  [key: string]: any; // Allow any field for now
+  [key: string]: any; 
+}
+
+interface BranchListResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: Branch[];
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+  meta?: {
+    count: number;
+    next: string | null;
+    previous: string | null;
+  };
 }
 
 const getAuthHeaders = async () => {
@@ -20,32 +37,24 @@ const getAuthHeaders = async () => {
   };
 };
 
-export const getBranches = async () => {
+export const getBranches = async (page: number = 1): Promise<ApiResponse<Branch[]>> => {
   try {
     const headers = await getAuthHeaders();
-    const url = `${IDENTITY_BASE_URL}/branch/`;
+    const url = `${IDENTITY_BASE_URL}/branch/?page=${page}`;
 
-    console.log("------------------------------------------------");
-    console.log("🔵 FETCHING BRANCHES:", url);
-    const response = await axios.get(url, { headers });
+    const response = await axios.get<BranchListResponse>(url, { headers });
 
-    console.log("🟢 BRANCH RESPONSE:", JSON.stringify(response.data, null, 2));
-    console.log("------------------------------------------------");
-
-    // Assuming standard pagination structure (results array)
-    // If different, we will see it in the logs
     return {
       success: true,
-      data: response.data.results || response.data // Fallback if no pagination
+      data: response.data.results,
+      meta: {
+        count: response.data.count,
+        next: response.data.next,
+        previous: response.data.previous
+      }
     };
 
   } catch (error: any) {
-    console.log("🔴 BRANCH API ERROR");
-    if (axios.isAxiosError(error) && error.response) {
-      console.log("DATA:", JSON.stringify(error.response.data, null, 2));
-    } else {
-      console.log(error);
-    }
     return { success: false, message: 'Failed to fetch branches' };
   }
 };
