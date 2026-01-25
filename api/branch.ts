@@ -154,3 +154,51 @@ export const createBranch = async (name: string, location: string) => {
     return { success: false, message: 'Network error occurred' };
   }
 };
+
+// --- UPDATE (PATCH) ---
+export const updateBranch = async (id: string, data: { name?: string; location?: string }) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${IDENTITY_BASE_URL}/branch/${id}/`;
+
+    console.log("🔵 UPDATING BRANCH:", id, data);
+    const response = await axios.patch(url, data, { headers });
+
+    return {
+      success: true,
+      message: 'Branch updated successfully',
+      data: response.data
+    };
+  } catch (error: any) {
+    console.log("🔴 UPDATE BRANCH ERROR");
+    if (axios.isAxiosError(error) && error.response) {
+      return { 
+        success: false, 
+        message: error.response.data.message || 'Failed to update branch' 
+      };
+    }
+    return { success: false, message: 'Network error occurred' };
+  }
+};
+
+// --- DELETE ---
+export const deleteBranch = async (id: string) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${IDENTITY_BASE_URL}/branch/${id}/`;
+    
+    console.log("🔵 DELETING BRANCH:", id);
+    const response = await axios.delete(url, { headers });
+
+    return { success: true, message: 'Branch deleted successfully' };
+  } catch (error: any) {
+    console.log("🔴 DELETE BRANCH ERROR");
+    if (axios.isAxiosError(error) && error.response) {
+      return { 
+        success: false, 
+        message: error.response.data.message || 'Failed to delete branch' 
+      };
+    }
+    return { success: false, message: 'Network error occurred' };
+  }
+};

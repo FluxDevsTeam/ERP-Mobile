@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Cloud, LogOut, Home, Users, Building, CreditCard, DollarSign } from 'lucide-react-native';
-import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
-import { useUserStore } from '@/store/userStore';
 import { logoutUser } from '@/api/login';
+import { useUserStore } from '@/store/userStore';
+import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { router } from 'expo-router';
+import { Building, Cloud, CreditCard, DollarSign, Home, LogOut, Users } from 'lucide-react-native';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Sidebar(props: any) {
   const { user, logout } = useUserStore();
@@ -32,41 +32,56 @@ export default function Sidebar(props: any) {
 
         {/* Navigation Items */}
         <View className="px-4 mt-4">
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center py-4 px-3 rounded-lg hover:bg-slate-50 active:bg-slate-100"
-            onPress={() => router.push('/dashboard')}
+            onPress={() => {
+              props.navigation.closeDrawer();
+              router.push({ pathname: '/dashboard', params: { tab: 'tenants' } });
+            }}
           >
             <Home size={20} color="#5841D8" className="mr-4" />
             <Text className="text-base font-medium text-[#334155]">Dashboard</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center py-4 px-3 rounded-lg hover:bg-slate-50 active:bg-slate-100"
-            onPress={() => {/* Navigate to User Management */}}
+            onPress={() => {
+              props.navigation.closeDrawer();
+              router.push({ pathname: '/dashboard', params: { tab: 'users' } });
+            }}
           >
             <Users size={20} color="#5841D8" className="mr-4" />
             <Text className="text-base font-medium text-[#334155]">User Management</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center py-4 px-3 rounded-lg hover:bg-slate-50 active:bg-slate-100"
-            onPress={() => {/* Navigate to Tenant & Branches */}}
+            onPress={() => {
+              props.navigation.closeDrawer();
+              router.push({ pathname: '/dashboard', params: { tab: 'tenants' } });
+            }}
           >
             <Building size={20} color="#5841D8" className="mr-4" />
             <Text className="text-base font-medium text-[#334155]">Tenant & Branches</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center py-4 px-3 rounded-lg hover:bg-slate-50 active:bg-slate-100"
-            onPress={() => {/* Navigate to Subscription */}}
+            onPress={() => {
+              props.navigation.closeDrawer();
+              router.push({ pathname: '/dashboard', params: { tab: 'subscription' } });
+            }}
           >
             <CreditCard size={20} color="#5841D8" className="mr-4" />
             <Text className="text-base font-medium text-[#334155]">Subscription</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             className="flex-row items-center py-4 px-3 rounded-lg hover:bg-slate-50 active:bg-slate-100"
-            onPress={() => {/* Navigate to Payments */}}
+            onPress={() => {
+              props.navigation.closeDrawer();
+              router.push({ pathname: '/dashboard', params: { tab: 'payments' } });
+            }}
           >
             <DollarSign size={20} color="#5841D8" className="mr-4" />
             <Text className="text-base font-medium text-[#334155]">Payments</Text>
@@ -76,7 +91,7 @@ export default function Sidebar(props: any) {
 
       {/* Footer Logout */}
       <View className="border-t border-slate-100 px-4 py-6">
-        <TouchableOpacity 
+        <TouchableOpacity
           className="flex-row items-center py-3 px-3 rounded-lg active:bg-slate-100"
           onPress={handleLogout}
         >

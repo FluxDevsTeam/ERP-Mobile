@@ -2,17 +2,36 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { BILLING_BASE_URL } from './baseURL/billingBaseURL';
 
-// ... (Keep existing interfaces: Plan, Subscription, Responses) ...
+// --- Types ---
+export type BillingPeriod = 'monthly' | 'quarterly' | 'biannual' | 'annual';
+export type Industry = 'Basic' | 'Finance' | 'Healthcare' | 'Production' | 'Education' | 'Technology' | 'Retail' | 'Agriculture' | 'Real Estate' | 'Supermarket' | 'Warehouse' | 'Other';
+export type TierLevel = 'tier1' | 'tier2' | 'tier3' | 'tier4';
+
 export interface Plan {
   id: string;
   name: string;
   description: string;
-  industry: string;
+  industry: Industry;
   max_users: number;
   max_branches: number;
   price: string;
-  billing_period: 'monthly' | 'quarterly' | 'annual';
-  tier_level: string;
+  billing_period: BillingPeriod;
+  is_active?: boolean;
+  discontinued?: boolean;
+  tier_level: TierLevel;
+}
+
+export interface CreatePlanRequest {
+  name: string;
+  description: string;
+  industry: Industry;
+  max_users: number;
+  max_branches: number;
+  price: string;
+  billing_period: BillingPeriod;
+  is_active?: boolean;
+  discontinued?: boolean;
+  tier_level: TierLevel;
 }
 
 export interface Subscription {
@@ -165,6 +184,79 @@ export const deletePlan = async (id: string) => {
       return { 
         success: false, 
         message: error.response.data.message || 'Failed to delete plan' 
+      };
+    }
+    return { success: false, message: 'Network error occurred' };
+  }
+};
+
+// --- CREATE PLAN ---
+export const createPlan = async (planData: CreatePlanRequest) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${BILLING_BASE_URL}/billing/plans/`;
+    
+    console.log("------------------------------------------------");
+    console.log("🔵 CREATING PLAN REQUEST");
+    console.log("URL:", url);
+    console.log("PAYLOAD:", JSON.stringify(planData, null, 2));
+    console.log("------------------------------------------------");
+
+    const response = await axios.post(url, planData, { headers });
+
+    console.log("🟢 CREATE PLAN SUCCESS");
+    console.log("STATUS:", response.status);
+    console.log("DATA:", JSON.stringify(response.data, null, 2));
+    console.log("------------------------------------------------");
+
+    return {
+      success: true,
+      message: response.data.message || 'Plan created successfully',
+      data: response.data
+    };
+
+  } catch (error: any) {
+    console.log("------------------------------------------------");
+    console.log("🔴 CREATE PLAN ERROR");
+    
+    if (axios.isAxiosError(error) && error.response) {
+      console.log("STATUS CODE:", error.response.status);
+      console.log("ERROR DATA:", JSON.stringify(error.response.data, null, 2));
+      
+      return { 
+        success: false, 
+        message: error.response.data.message || error.response.data.detail || 'Failed to create plan' 
+      };
+    }
+    
+    console.error("ERROR OBJ:", error);
+    console.log("------------------------------------------------");
+    return { success: false, message: 'Network error occurred' };
+  }
+};
+
+// --- UPDATE PLAN ---
+export const updatePlan = async (id: string, planData: Partial<CreatePlanRequest>) => {
+  try {
+    const headers = await getAuthHeaders();
+    const url = `${BILLING_BASE_URL}/billing/plans/${id}/`;
+    
+    console.log("🔵 UPDATING PLAN:", id, planData);
+
+    const response = await axios.patch(url, planData, { headers });
+
+    return {
+      success: true,
+      message: response.data.message || 'Plan updated successfully',
+      data: response.data
+    };
+
+  } catch (error: any) {
+    console.log("🔴 UPDATE PLAN ERROR");
+    if (axios.isAxiosError(error) && error.response) {
+      return { 
+        success: false, 
+        message: error.response.data.message || 'Failed to update plan' 
       };
     }
     return { success: false, message: 'Network error occurred' };

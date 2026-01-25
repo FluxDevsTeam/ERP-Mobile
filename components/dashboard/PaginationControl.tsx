@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   currentPage: number;
@@ -17,9 +17,9 @@ export default function PaginationControl({ currentPage, hasNext, hasPrev, onNex
       <Text className="text-sm text-[#64748B]">
         Page {currentPage} {totalCount ? `of ~${Math.ceil(totalCount / 10)}` : ''}
       </Text>
-      
-      <View className="flex-row gap-x-2">
-        <TouchableOpacity 
+
+      <View className="flex-row gap-x-4">
+        <TouchableOpacity
           onPress={onPrev}
           disabled={!hasPrev}
           className={`border border-slate-300 rounded-lg px-3 py-1.5 flex-row items-center ${!hasPrev ? 'opacity-50' : ''}`}
@@ -28,7 +28,7 @@ export default function PaginationControl({ currentPage, hasNext, hasPrev, onNex
           <Text className="text-sm font-semibold text-[#334155] ml-1">Prev</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={onNext}
           disabled={!hasNext}
           className={`border border-slate-300 rounded-lg px-3 py-1.5 flex-row items-center ${!hasNext ? 'opacity-50' : ''}`}

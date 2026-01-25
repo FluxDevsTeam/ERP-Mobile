@@ -1,12 +1,11 @@
+import { Redirect, SplashScreen, Stack, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Stack, Redirect } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useSegments, SplashScreen } from 'expo-router';
 import "../global.css";
 
-import { useUserStore } from '../store/userStore';
 import LoadingSplashScreen from '../components/LoadingSplashScreen'; // Adjust path if needed
+import { useUserStore } from '../store/userStore';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -15,7 +14,7 @@ export default function RootLayout() {
   const { user, token, hasHydrated } = useUserStore();
   const segments = useSegments();
   const [appIsReady, setAppIsReady] = useState(false);
-  
+
   console.log('🔄 App State:', {
     hasHydrated,
     hasToken: !!token,
@@ -33,7 +32,7 @@ export default function RootLayout() {
     }
 
     console.log('✅ Store is hydrated');
-    
+
     // Hide splash screen and mark app as ready
     SplashScreen.hideAsync();
     setAppIsReady(true);
@@ -52,7 +51,7 @@ export default function RootLayout() {
   console.log('📂 Full Segments:', segments);
 
   // Define auth routes ('' for root/signup)
-  const authRoutes = ['', 'login', 'forgot-password'];
+  const authRoutes = ['', 'login', 'forgot-password', 'payment-callback'];
   const isAuthRoute = authRoutes.includes(firstSegment);
 
   // Check if in protected drawer group
@@ -69,7 +68,7 @@ export default function RootLayout() {
       return <Redirect href="/login" />;
     }
   }
-  
+
   // HAS TOKEN but NO USER
   if (token && !user) {
     console.log('⚠️ Has token but no user data');

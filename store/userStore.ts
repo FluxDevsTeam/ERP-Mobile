@@ -32,6 +32,7 @@ export const useUserStore = create<UserState>()(
       
       setUser: (user) => set({ user }),
       setToken: (token) => set({ token }),
+      
       setHasHydrated: (state) => set({ hasHydrated: state }), // NEW
       
       logout: () => {
